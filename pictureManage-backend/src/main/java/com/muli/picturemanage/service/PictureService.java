@@ -10,6 +10,7 @@ import com.muli.picturemanage.model.vo.PictureVO;
 import org.springframework.scheduling.annotation.Async;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
 * @author 沐璃
@@ -96,4 +97,14 @@ public interface PictureService extends IService<Picture> {
     void deletePicture(long pictureId, User loginUser);
 
     void editPicture(PictureEditRequest pictureEditRequest, User loginUser);
+
+/**
+ * 根据颜色搜索图片
+ *
+ * @param spaceId 空间ID，用于筛选特定用户的图片
+ * @param color 颜色参数，用于匹配图片的颜色特征
+ * @param loginUser 当前登录用户信息，用于权限验证
+ * @return 返回符合条件的PictureVO对象列表，包含图片的详细信息
+ */
+    List<PictureVO> searchPictureByColor(Long spaceId, String color, User loginUser);
 }

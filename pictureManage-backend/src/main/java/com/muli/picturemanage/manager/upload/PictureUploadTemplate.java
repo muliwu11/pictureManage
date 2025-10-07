@@ -108,8 +108,9 @@ public abstract class PictureUploadTemplate {
         uploadPictureResult.setPicWidth(picWidth);  
         uploadPictureResult.setPicHeight(picHeight);  
         uploadPictureResult.setPicScale(picScale);  
-        uploadPictureResult.setPicFormat(imageInfo.getFormat());  
-        uploadPictureResult.setPicSize(FileUtil.size(file));  
+        uploadPictureResult.setPicFormat(imageInfo.getFormat());
+        uploadPictureResult.setPicColor(imageInfo.getAve());
+        uploadPictureResult.setPicSize(FileUtil.size(file));
         uploadPictureResult.setUrl(cosClientConfig.getHost() + "/" + uploadPath);
         if( compressedCiObject != null ){
             uploadPictureResult.setViewUrl(cosClientConfig.getHost() + "/" + compressedCiObject.getKey());
