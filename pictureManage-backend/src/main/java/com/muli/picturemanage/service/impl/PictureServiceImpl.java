@@ -29,6 +29,8 @@ import com.muli.picturemanage.service.PictureService;
 import com.muli.picturemanage.mapper.PictureMapper;
 import com.muli.picturemanage.service.SpaceService;
 import com.muli.picturemanage.service.UserService;
+import com.muli.picturemanage.utils.ColorSimilarUtils;
+import com.muli.picturemanage.utils.ColorTransformUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -44,10 +46,12 @@ import org.springframework.util.DigestUtils;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.awt.*;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -62,28 +66,45 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         implements PictureService {
 
     @Resource
-    private UserService userService;
+    private UserService userService; // 用户服务，用于获取用户信息  // 用户服务注入
 
     @Resource
-    private SpaceService spaceService;
+    private SpaceService spaceService; // 空间服务，用于管理图片空间  // 空间服务注入
 
     @Resource
-    private CosManager cosManager;
+    private CosManager cosManager; // 腾讯云对象存储管理器，用于文件操作  // COS对象存储管理器注入
 
     @Resource
-    private UrlPictureUpload urlPictureUpload;
+    private UrlPictureUpload urlPictureUpload;  // URL图片上传模板注入 // URL图片上传处理器
 
     @Resource
-    private FilePictureUpload filePictureUpload;
+    private FilePictureUpload filePictureUpload;  // 文件图片上传模板注入 // 文件图片上传处理器
 
     @Resource
-    private TransactionTemplate transactionTemplate;
+    private TransactionTemplate transactionTemplate;  // 事务模板注入 // 事务模板，用于事务管理
 
     @Resource
-    private StringRedisTemplate stringRedisTemplate;
+    private StringRedisTemplate stringRedisTemplate;  // Redis字符串操作模板注入 // Redis操作模板
 
+    // 本地缓存对象，使用Caffeine实现
+    /**
+     * 本地缓存配置
+     * 初始容量：1024
+     * 最大容量：10000
+     * 过期时间：5分钟
+     */
+    /**
+     * 本地缓存对象，使用Caffeine实现
+     * 初始容量为1024，最大容量为10000
+     * 设置为5-10分钟随机过期，防止缓存雪崩
+     * 缓存过期时间为5分钟
+     */
     private final Cache<String, String> LOCAL_CACHE =
             Caffeine.newBuilder().initialCapacity(1024)
+    /**
+     * 校验图片参数的合法性
+     * @param picture 图片实体对象
+     */
                     .maximumSize(10000L)
                     // 缓存 5 分钟移除
                     .expireAfterWrite(5L, TimeUnit.MINUTES)
@@ -101,6 +122,13 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         // 从对象中取值
         Long id = picture.getId();
         String url = picture.getUrl();
+    /**
+     * 上传图片
+     * @param inputSource 上传源，可以是文件或URL
+     * @param pictureUploadRequest 上传请求参数
+     * @param loginUser 当前登录用户
+     * @return 上传后的图片信息封装对象
+     */
         String introduction = picture.getIntroduction();
         // 修改数据时，id 不能为空，有参数则校验
         ThrowUtils.throwIf(ObjUtil.isNull(id), ErrorCode.PARAMS_ERROR, "id 不能为空");
@@ -184,6 +212,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         picture.setViewUrl(uploadPictureResult.getViewUrl());
         // 设置缩略图的图片地址
         picture.setThumbnailUrl(uploadPictureResult.getThumbnailUrl());
+        // 设置图片主色调
+        picture.setPicColor(ColorTransformUtils.expandHexColor(uploadPictureResult.getPicColor()));
         //支持外界传图片名称
         String picName = uploadPictureResult.getPicName();
         if (pictureUploadRequest != null && StrUtil.isNotBlank(pictureUploadRequest.getPicName())) {
@@ -211,6 +241,11 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "图片上传失败");
             if (finalSpaceId != null) {
                 boolean update = spaceService.lambdaUpdate()
+    /**
+     * 获取图片查询条件构造器
+     * @param pictureQueryRequest 查询请求参数
+     * @return 查询条件构造器
+     */
                         .eq(Space::getId, finalSpaceId)
                         .setSql("totalSize = totalSize + " + picture.getPicSize())
                         .setSql("totalCount = totalCount + 1")
@@ -248,6 +283,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         Long reviewerId = pictureQueryRequest.getReviewerId();
         Long spaceId = pictureQueryRequest.getSpaceId();
         boolean nullSpaceId = pictureQueryRequest.isNullSpaceId();
+        Date startEditTime = pictureQueryRequest.getStartEditTime();
+        Date endEditTime = pictureQueryRequest.getEndEditTime();
         // 从多字段中搜索
         if (StrUtil.isNotBlank(searchText)) {
             // 需要拼接查询条件
@@ -271,6 +308,10 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         queryWrapper.eq(ObjUtil.isNotEmpty(reviewStatus), "reviewStatus", reviewStatus);
         queryWrapper.like(StrUtil.isNotBlank(reviewMessage), "reviewMessage", reviewMessage);
         queryWrapper.eq(ObjUtil.isNotEmpty(reviewerId), "reviewerId", reviewerId);
+        // >= startEditTime
+        queryWrapper.ge(ObjUtil.isNotEmpty(startEditTime), "editTime", startEditTime);
+        // < endEditTime
+        queryWrapper.lt(ObjUtil.isNotEmpty(endEditTime), "editTime", endEditTime);
         // JSON 数组查询
         if (CollUtil.isNotEmpty(tags)) {
             for (String tag : tags) {
@@ -622,6 +663,44 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         // 操作数据库
         boolean result = this.updateById(picture);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+    }
+
+    @Override
+    public List<PictureVO> searchPictureByColor(Long spaceId, String picColor, User loginUser) {
+        // 1. 校验参数
+        ThrowUtils.throwIf(spaceId == null || StrUtil.isBlank(picColor), ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIf(loginUser == null, ErrorCode.NO_AUTH_ERROR);
+        // 2. 校验空间权限
+        Space space = spaceService.getById(spaceId);
+        ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
+        if(!space.getUserId().equals(loginUser.getId())) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "没有空间方法权限");
+        }
+        // 3. 查询该空间下的所有图片（必须要有主色调）
+        List<Picture> PictureList = this.lambdaQuery()
+                .eq(Picture::getSpaceId, spaceId)
+                .isNotNull(Picture::getPicColor)
+                .list();
+        if(CollUtil.isEmpty(PictureList)){
+            return new ArrayList<>();
+        }
+        // 4. 根据颜色字符串转化为主色调，计算相似度并排序
+        Color targetColor = Color.decode(picColor);
+        List<Picture> sortedPictureList = PictureList.stream()
+                .sorted(Comparator.comparingDouble(picture -> {
+                    String hexColor = picture.getPicColor();
+                    if(StrUtil.isBlank(hexColor)){
+                        return Double.MAX_VALUE;
+                    }
+                    Color color = Color.decode(hexColor);
+                    return -ColorSimilarUtils.calculateSimilarity(targetColor, color);
+                }))
+                .limit(12)
+                .collect(Collectors.toList());
+        // 5. 返回结果
+        return sortedPictureList.stream()
+                .map(PictureVO::objToVo)
+                .collect(Collectors.toList());
     }
 
 

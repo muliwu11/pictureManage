@@ -8,6 +8,11 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.Date;
 
+/**
+ * 图片查询请求对象
+ * 继承自PageRequest，实现Serializable接口
+ * 用于接收前端传递的图片查询条件参数
+ */
 @EqualsAndHashCode(callSuper = true)
 @Data
 public class PictureQueryRequest extends PageRequest implements Serializable {
@@ -101,8 +106,15 @@ public class PictureQueryRequest extends PageRequest implements Serializable {
      * 是否只查询 spaceId 为 null 的数据
      */
     private boolean nullSpaceId;
+    /**
+     * 开始编辑时间
+     */
+    private Date startEditTime;
 
-
+    /**
+     * 结束编辑时间
+     */
+    private Date endEditTime;
 
     private static final long serialVersionUID = 1L;  
 }

@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { deletePictureUsingPost, getPictureVoByIdUsingGet } from '@/api/pictureController.ts'
 import { message } from 'ant-design-vue'
 import { DeleteOutlined, EditOutlined, DownloadOutlined } from '@ant-design/icons-vue'
-import { downloadImage, formatSize } from '../utils'
+import { downloadImage, formatSize, toHexColor } from '../utils'
 import { useLoginUserStore } from '@/stores/useLoginUserStore.ts'
 import router from '@/router'
 
@@ -52,8 +52,8 @@ const doEdit = () => {
     path: '/add_picture',
     query: {
       id: picture.value.id,
-      spaceId: picture.value.spaceId
-    }
+      spaceId: picture.value.spaceId,
+    },
   })
 }
 
@@ -75,6 +75,8 @@ const doDelete = async () => {
 const doDownload = () => {
   downloadImage(picture.value.url)
 }
+
+
 </script>
 
 <template>
@@ -83,7 +85,10 @@ const doDownload = () => {
       <!-- 图片展示区 -->
       <a-col :sm="24" :md="16" :xl="18">
         <a-card title="图片预览">
-          <a-image style="max-height: 600px; object-fit: contain" :src="picture.viewUrl??picture.url" />
+          <a-image
+            style="max-height: 600px; object-fit: contain"
+            :src="picture.viewUrl ?? picture.url"
+          />
         </a-card>
       </a-col>
       <!-- 图片信息区 -->
@@ -124,6 +129,19 @@ const doDownload = () => {
             </a-descriptions-item>
             <a-descriptions-item label="大小">
               {{ formatSize(picture.picSize) }}
+            </a-descriptions-item>
+            <a-descriptions-item label="主色调">
+              <a-space>
+                {{ picture.picColor ?? '-' }}
+                <div
+                  v-if="picture.picColor"
+                  :style="{
+                    backgroundColor: toHexColor(picture.picColor),
+                    width: '16px',
+                    height: '16px',
+                  }"
+                />
+              </a-space>
             </a-descriptions-item>
           </a-descriptions>
         </a-card>
