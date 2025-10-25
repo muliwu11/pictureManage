@@ -2,16 +2,30 @@
 import { computed, onMounted, ref } from 'vue'
 import { deletePictureUsingPost, getPictureVoByIdUsingGet } from '@/api/pictureController.ts'
 import { message } from 'ant-design-vue'
-import { DeleteOutlined, EditOutlined, DownloadOutlined } from '@ant-design/icons-vue'
+import { DeleteOutlined, EditOutlined, DownloadOutlined, ShareAltOutlined} from '@ant-design/icons-vue'
 import { downloadImage, formatSize, toHexColor } from '../utils'
 import { useLoginUserStore } from '@/stores/useLoginUserStore.ts'
 import router from '@/router'
+import ShareModal from '@/components/ShareModal.vue'
+import { SPACE_PERMISSION_ENUM } from '@/constants/space.ts'
 
 const props = defineProps<{
   id: string | number
 }>()
 
 const picture = ref<API.PictureVO>({})
+
+// 通用权限检查函数
+function createPermissionChecker(permission: string) {
+  return computed(() => {
+    return (picture.value.permissionList ?? []).includes(permission)
+  })
+}
+
+// 定义权限检查
+const canEdit = createPermissionChecker(SPACE_PERMISSION_ENUM.PICTURE_EDIT)
+const canDelete = createPermissionChecker(SPACE_PERMISSION_ENUM.PICTURE_DELETE)
+
 
 // 获取图片详情
 const fetchPictureDetail = async () => {
@@ -21,6 +35,7 @@ const fetchPictureDetail = async () => {
     })
     if (res.data.code === 0 && res.data.data) {
       picture.value = res.data.data
+      console.log(res.data.data)
     } else {
       message.error('获取图片详情失败，' + res.data.message)
     }
@@ -35,16 +50,16 @@ onMounted(() => {
 
 const loginUserStore = useLoginUserStore()
 // 是否具有编辑权限
-const canEdit = computed(() => {
-  const loginUser = loginUserStore.loginUser
-  // 未登录不可编辑
-  if (!loginUser.id) {
-    return false
-  }
-  // 仅本人或管理员可编辑
-  const user = picture.value.user || {}
-  return loginUser.id === user.id || loginUser.userRole === 'admin'
-})
+// const canEdit = computed(() => {
+//   const loginUser = loginUserStore.loginUser
+//   // 未登录不可编辑
+//   if (!loginUser.id) {
+//     return false
+//   }
+//   // 仅本人或管理员可编辑
+//   const user = picture.value.user || {}
+//   return loginUser.id === user.id || loginUser.userRole === 'admin'
+// })
 
 // 编辑
 const doEdit = () => {
@@ -76,7 +91,18 @@ const doDownload = () => {
   downloadImage(picture.value.url)
 }
 
+// 分享弹窗引用
+const shareModalRef = ref()
+// 分享链接
+const shareLink = ref<string>()
 
+// 分享
+const doShare = () => {
+  shareLink.value = `${window.location.protocol}//${window.location.host}/picture/${picture.value.id}`
+  if (shareModalRef.value) {
+    shareModalRef.value.openModal()
+  }
+}
 </script>
 
 <template>
@@ -152,13 +178,19 @@ const doDownload = () => {
               <DownloadOutlined />
             </template>
           </a-button>
+          <a-button type="primary" ghost @click="doShare">
+            分享
+            <template #icon>
+              <ShareAltOutlined />
+            </template>
+          </a-button>
           <a-button v-if="canEdit" type="default" @click="doEdit">
             编辑
             <template #icon>
               <EditOutlined />
             </template>
           </a-button>
-          <a-button v-if="canEdit" danger @click="doDelete">
+          <a-button v-if="canDelete" danger @click="doDelete">
             删除
             <template #icon>
               <DeleteOutlined />
@@ -167,6 +199,7 @@ const doDownload = () => {
         </a-space>
       </a-col>
     </a-row>
+    <ShareModal ref="shareModalRef" :link="shareLink" />
   </div>
 </template>
 

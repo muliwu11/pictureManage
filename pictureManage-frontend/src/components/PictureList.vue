@@ -1,20 +1,26 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { DeleteOutlined, EditOutlined } from '@ant-design/icons-vue'
+import { DeleteOutlined, EditOutlined, ShareAltOutlined } from '@ant-design/icons-vue'
 import { deletePictureUsingPost } from '@/api/pictureController.ts'
 import { message } from 'ant-design-vue'
+import ShareModal from '@/components/ShareModal.vue'
+import { ref } from 'vue'
 
 interface Props {
   dataList?: API.PictureVO[]
   loading?: boolean
   showOp?: boolean
   onReload?: () => void
+  canDelete?: boolean
+  canEdit?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   dataList: () => [],
   loading: false,
   showOp: false,
+  canDelete: false,
+  canEdit: false,
 })
 const router = useRouter()
 // 跳转至图片详情页
@@ -52,6 +58,21 @@ const doDelete = async (picture, e) => {
     message.error('删除失败')
   }
 }
+
+// 分享弹窗引用
+const shareModalRef = ref()
+// 分享链接
+const shareLink = ref<string>()
+
+// 分享
+const doShare = (picture: API.PictureVO, e: Event) => {
+  e.stopPropagation()
+  shareLink.value = `${window.location.protocol}//${window.location.host}/picture/${picture.id}`
+  if (shareModalRef.value) {
+    shareModalRef.value.openModal()
+  }
+}
+
 </script>
 
 <template>
@@ -86,11 +107,15 @@ const doDelete = async (picture, e) => {
               </template>
             </a-card-meta>
             <template v-if="showOp" #actions>
-              <a-space @click="(e) => doEdit(picture, e)">
+              <a-space @click="(e) => doShare(picture, e)">
+                <ShareAltOutlined />
+                分享
+              </a-space>
+              <a-space @click="(e) => doEdit(picture, e)" v-if="canEdit">
                 <EditOutlined />
                 编辑
               </a-space>
-              <a-space @click="(e) => doDelete(picture, e)">
+              <a-space @click="(e) => doDelete(picture, e)" v-if="canDelete">
                 <DeleteOutlined />
                 删除
               </a-space>
@@ -99,6 +124,7 @@ const doDelete = async (picture, e) => {
         </a-list-item>
       </template>
     </a-list>
+    <ShareModal ref="shareModalRef" :link="shareLink" />
   </div>
 </template>
 
