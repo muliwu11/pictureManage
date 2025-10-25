@@ -6,8 +6,10 @@ import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.muli.picturemanage.constant.UserConstant;
 import com.muli.picturemanage.exception.BusinessException;
 import com.muli.picturemanage.exception.ErrorCode;
+import com.muli.picturemanage.manager.auth.StpKit;
 import com.muli.picturemanage.model.dto.user.UserQueryRequest;
 import com.muli.picturemanage.model.entity.User;
 import com.muli.picturemanage.model.enums.UserRoleEnum;
@@ -108,6 +110,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
         // 3. 记录用户的登录态
         request.getSession().setAttribute(USER_LOGIN_STATE, user);
+        // 记录用户登录态到 Sa-token, 便于空间鉴权使用
+        StpKit.SPACE.login(user.getId());
+        StpKit.SPACE.getSession().set(USER_LOGIN_STATE, user);
         return this.getLoginUserVO(user);
     }
 

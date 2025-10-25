@@ -11,7 +11,7 @@ spring:
     name: picture-manage-backend
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/picture
+    url: jdbc:mysql://localhost:3306/picture?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: root
     password: 986532asd
       # Redis 配置
@@ -28,6 +28,35 @@ spring:
   session:
     store-type: redis
     timeout: 2592000
+  # 空间图片分表
+  shardingsphere:
+    datasource:
+      names: picture
+      picture:
+        type: com.zaxxer.hikari.HikariDataSource
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        url: jdbc:mysql://localhost:3306/picture?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+        username: root
+        password: 986532asd
+    rules:
+      sharding:
+        tables:
+          picture:
+            actualDataNodes: picture.picture  # 动态分表
+            tableStrategy:
+              standard:
+                shardingColumn: spaceId
+                shardingAlgorithmName: picture_sharding_algorithm  # 使用自定义分片算法
+        sharding-algorithms:
+          picture_sharding_algorithm:
+            type: CLASS_BASED
+            props:
+              strategy: standard
+              algorithmClassName: com.muli.picturemanage.manager.sharding.PictureShardingAlgorithm
+    props:
+      sql-show: true
+
+
 
 mybatis-plus:
   configuration:
@@ -38,6 +67,7 @@ mybatis-plus:
       logic-delete-field: isDelete
       logic-not-delete-value: 0 #未删除
       logic-delete-value: 1 #已删除
+    enable-sql-runner: true
 
 
 knife4j:
@@ -51,3 +81,7 @@ knife4j:
         api-rule: package
         api-rule-resources:
           - com.muli.picturemanage.controller
+          -
+# 智能云图库
+aliYunAi:
+  apiKey: sk-752860f5ebc74a48bda57b048f8b90bf

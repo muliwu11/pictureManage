@@ -2,6 +2,7 @@ package com.muli.picturemanage.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.muli.picturemanage.api.aliyunai.model.CreateOutPaintingTaskResponse;
 import com.muli.picturemanage.model.dto.picture.*;
 import com.muli.picturemanage.model.entity.Picture;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -13,10 +14,10 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 
 /**
-* @author 沐璃
-* @description 针对表【picture(图片)】的数据库操作Service
-* @createDate 2025-02-08 21:55:26
-*/
+ * @author 沐璃
+ * @description 针对表【picture(图片)】的数据库操作Service
+ * @createDate 2025-02-08 21:55:26
+ */
 public interface PictureService extends IService<Picture> {
     void validPicture(Picture picture);
 
@@ -34,6 +35,7 @@ public interface PictureService extends IService<Picture> {
 
     /**
      * 将用户传入的参数改造成查询的QueryWrapper
+     *
      * @param pictureQueryRequest
      * @return
      */
@@ -42,6 +44,7 @@ public interface PictureService extends IService<Picture> {
 
     /**
      * 获取单条脱敏后的图片对象
+     *
      * @param picture
      * @param request
      * @return
@@ -50,6 +53,7 @@ public interface PictureService extends IService<Picture> {
 
     /**
      * 获取分页包装脱敏后的图片对象
+     *
      * @param picturePage
      * @param request
      * @return
@@ -66,6 +70,7 @@ public interface PictureService extends IService<Picture> {
 
     /**
      * 填充审核状态
+     *
      * @param picture
      * @param loginUser
      */
@@ -98,13 +103,30 @@ public interface PictureService extends IService<Picture> {
 
     void editPicture(PictureEditRequest pictureEditRequest, User loginUser);
 
-/**
- * 根据颜色搜索图片
- *
- * @param spaceId 空间ID，用于筛选特定用户的图片
- * @param color 颜色参数，用于匹配图片的颜色特征
- * @param loginUser 当前登录用户信息，用于权限验证
- * @return 返回符合条件的PictureVO对象列表，包含图片的详细信息
- */
+    /**
+     * 根据颜色搜索图片
+     *
+     * @param spaceId   空间ID，用于筛选特定用户的图片
+     * @param color     颜色参数，用于匹配图片的颜色特征
+     * @param loginUser 当前登录用户信息，用于权限验证
+     * @return 返回符合条件的PictureVO对象列表，包含图片的详细信息
+     */
     List<PictureVO> searchPictureByColor(Long spaceId, String color, User loginUser);
+
+    /**
+     * 批量编辑图片
+     *
+     * @param pictureEditByBatchRequest
+     * @param loginUser
+     */
+    void editPictureByBatch(PictureEditByBatchRequest pictureEditByBatchRequest, User loginUser);
+
+    /**
+     * 创建图片外部绘画任务的方法
+     *
+     * @param createPictureOutPaintingTaskRequest 创建图片外部绘画任务的请求参数对象
+     * @param loginUser                           当前登录用户信息对象
+     * @return CreateOutPaintingTaskResponse 创建外部绘画任务的响应结果对象
+     */
+    CreateOutPaintingTaskResponse createPictureOutPaintingTask(CreatePictureOutPaintingTaskRequest createPictureOutPaintingTaskRequest, User loginUser);
 }

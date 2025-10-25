@@ -9,6 +9,7 @@ import com.muli.picturemanage.constant.UserConstant;
 import com.muli.picturemanage.exception.BusinessException;
 import com.muli.picturemanage.exception.ErrorCode;
 import com.muli.picturemanage.exception.ThrowUtils;
+import com.muli.picturemanage.manager.auth.SpaceUserAuthManager;
 import com.muli.picturemanage.model.dto.space.*;
 import com.muli.picturemanage.model.entity.Space;
 import com.muli.picturemanage.model.entity.User;
@@ -37,6 +38,9 @@ public class SpaceController {
 
     @Resource
     private SpaceService spaceService;
+
+    @Resource
+    private SpaceUserAuthManager spaceUserAuthManager;
 
     @PostMapping("/add")
     public BaseResponse<Long> addSpace(@RequestBody SpaceAddRequest spaceAddRequest, HttpServletRequest request) {
@@ -121,12 +125,12 @@ public class SpaceController {
         // 查询数据库
         Space space = spaceService.getById(id);
         ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR);
-//        SpaceVO spaceVO = spaceService.getSpaceVO(space, request);
-//        User loginUser = userService.getLoginUser(request);
-//        List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
-//        spaceVO.setPermissionList(permissionList);
+        SpaceVO spaceVO = spaceService.getSpaceVO(space, request);
+        User loginUser = userService.getLoginUser(request);
+        List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
+        spaceVO.setPermissionList(permissionList);
         // 获取封装类
-        return ResultUtils.success(spaceService.getSpaceVO(space, request));
+        return ResultUtils.success(spaceVO);
     }
 
     /**

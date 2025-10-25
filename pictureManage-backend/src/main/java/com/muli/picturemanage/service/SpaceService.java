@@ -29,4 +29,6 @@ public interface SpaceService extends IService<Space> {
     Page<SpaceVO> getSpaceVOPage(Page<Space> spacePage, HttpServletRequest request);
 
     QueryWrapper<Space> getQueryWrapper(SpaceQueryRequest spaceQueryRequest);
+
+    void checkSpaceAuth(User loginUser, Space space);
 }
